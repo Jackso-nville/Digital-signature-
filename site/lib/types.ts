@@ -21,7 +21,6 @@ export const createCertificateSchema = z.object({
   studentEmail: z.email("Invalid email address"),
   cohort: z.string().min(1, "Cohort is required"),
   metadata: z.record(z.any(), z.any()).optional(),
-  fileUrl: z.url().optional(),
 });
 
 export const updateCertificateSchema = z.object({

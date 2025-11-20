@@ -5,6 +5,8 @@ import { getCanonicalCertificateData, createSha256Hash } from "./cryptoService";
 import { generateQRCode } from "./qrService";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { generatePdf } from "./pdfService";
+import { sendEmail } from "./emailService";
 
 /**
  * Generates a unique certificate ID.
@@ -15,7 +17,7 @@ export function generateCertificateId() {
 }
 
 /**
- * Creates a new certificate.
+ * Creates a new certificate, generates a PDF, and sends it via email.
  * @param data - The certificate data.
  * @param issuedBy - The ID of the admin issuing the certificate.
  * @returns The newly created certificate record along with the QR code.
@@ -27,6 +29,20 @@ export async function createCertificate(
   const certificateId = generateCertificateId();
   const canonicalData = getCanonicalCertificateData(data);
   const signature = createSha256Hash(canonicalData);
+  const issuedAt = new Date();
+  const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/verify/${certificateId}`;
+
+  const qrCode = await generateQRCode(verificationUrl);
+
+  const pdfPath = await generatePdf({
+    certificateId,
+    studentName: data.studentName,
+    cohort: data.cohort,
+    qrCode,
+    issuedAt: issuedAt.toLocaleDateString(),
+  });
+
+  const fileUrl = `/uploads/${certificateId}.pdf`;
 
   const newCertificate = {
     id: certificateId,
@@ -34,13 +50,19 @@ export async function createCertificate(
     issuedBy,
     signature,
     signatureMethod: "SHA-256",
+    fileUrl,
+    issuedAt,
   };
 
   await db.insert(certificates).values(newCertificate);
 
-  const qrCode = await generateQRCode(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/verify/${certificateId}`
-  );
+  await sendEmail({
+    to: data.studentEmail,
+    subject: "Your Dada Devs Certificate of Completion",
+    studentName: data.studentName,
+    verificationLink: verificationUrl,
+    attachmentPath: pdfPath,
+  });
 
   return { ...newCertificate, qrCode };
 }
