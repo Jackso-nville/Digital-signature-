@@ -1,8 +1,14 @@
-import { drizzle } from 'drizzle-orm/node-postgres';
-const DATABASE_URL = process.env.DATABASE_URL;
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+import * as schema from "./schema";
 
-if (!DATABASE_URL) {
-  throw new Error('DATABASE_URL is not defined in environment variables');
-}
-const db = drizzle(DATABASE_URL);
-export { db };
+// Create PostgreSQL connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
+// Create Drizzle instance
+export const db = drizzle(pool, { schema });
+
+// Export types
+export type DB = typeof db;
