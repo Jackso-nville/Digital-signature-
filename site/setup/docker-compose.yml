@@ -1,0 +1,13 @@
+services:
+  digital-signature-db:
+    image: postgres:18
+    volumes:
+      - digital-signature-db:/var/lib/postgresql
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+    ports:
+      - 6219:5432
+
+volumes:
+  digital-signature-db:
